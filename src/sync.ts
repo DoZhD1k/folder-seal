@@ -98,7 +98,7 @@ export async function reconcile(
 	const local = new Map<string, Side>();
 	for (const path of await io.listPlain()) {
 		const data = await io.readPlain(path);
-		local.set(await fileId(keys, path), { path, data, hash: await sha256Hex(data) });
+		local.set(await fileId(keys, path), { path, data, hash: await contentHash(path, data) });
 	}
 
 	const report: SyncReport = { sealed: [], restored: [], removedPlain: [], removedSealed: [], conflicts: [], orphaned: 0 };
@@ -108,7 +108,7 @@ export async function reconcile(
 		const match = SEALED_NAME.exec(name);
 		if (!match) continue;
 		const { file, stale } = await openAny(name, match[1], await io.readSealed(name), keys, previousKeys);
-		const side: Side = { path: file.path, data: file.content, hash: await sha256Hex(file.content), name, stale };
+		const side: Side = { path: file.path, data: file.content, hash: await contentHash(file.path, file.content), name, stale };
 		if (!isSafePath(file.path) || !managed(file.path)) {
 			report.orphaned++;
 			if (stale) staleOrphans.push(side);
@@ -284,6 +284,22 @@ async function opens(keys: SealKeys, blob: Uint8Array): Promise<boolean> {
 	} catch {
 		return false;
 	}
+}
+
+const TEXT_EXTENSIONS = /\.(md|txt|canvas|base|json|csv|tsv|css|js|html|svg|ya?ml)$/i;
+
+/**
+ * Hash used to compare versions of a file. For text files, CRLF counts as LF:
+ * git on Windows (core.autocrlf) checks text out with CRLF while other devices
+ * have LF, and a folder that git used to track would otherwise show up as
+ * "changed on both sides" in every file.
+ */
+export async function contentHash(path: string, data: Uint8Array): Promise<string> {
+	if (!TEXT_EXTENSIONS.test(path) || !data.includes(13)) return sha256Hex(data);
+	const out = new Uint8Array(data.length);
+	let n = 0;
+	for (let i = 0; i < data.length; i++) if (!(data[i] === 13 && data[i + 1] === 10)) out[n++] = data[i];
+	return sha256Hex(out.subarray(0, n));
 }
 
 /** A sealed file can only name a path inside the vault. */

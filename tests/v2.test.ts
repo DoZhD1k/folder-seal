@@ -117,6 +117,35 @@ describe("several encrypted folders", () => {
 	});
 });
 
+describe("line endings", () => {
+	it("does not see a conflict when only CRLF vs LF differs", async () => {
+		const { pc, phone } = devices();
+		pc.write("Здоровье/документы/a.md", "line one\r\nline two\r\n");
+		await pc.sync();
+		pc.commitAndSync();
+		phone.write("Здоровье/документы/a.md", "line one\nline two\n");
+		phone.pull();
+		const report = await phone.sync();
+		expect(report.conflicts).toEqual([]);
+		expect(phone.read("Здоровье/документы/a.md")).toBe("line one\nline two\n");
+	});
+
+	it("still sees a real edit in a CRLF file", async () => {
+		const { pc, phone } = devices();
+		pc.write("Здоровье/документы/a.md", "one\r\n");
+		await pc.sync();
+		pc.commitAndSync();
+		phone.pull();
+		await phone.sync();
+		phone.write("Здоровье/документы/a.md", "one\ntwo\n");
+		await phone.sync();
+		phone.commitAndSync();
+		pc.pull();
+		await pc.sync();
+		expect(pc.read("Здоровье/документы/a.md")).toBe("one\ntwo\n");
+	});
+});
+
 describe("keyring", () => {
 	it("locks and unlocks the master key with the passphrase", async () => {
 		const config = await lockMasterKey(master, "correct horse battery", 1000);

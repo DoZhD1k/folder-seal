@@ -1,0 +1,5 @@
+/* The folder list in the settings: room for full paths. */
+.folder-seal-folders {
+	width: 100%;
+	min-width: 16em;
+}

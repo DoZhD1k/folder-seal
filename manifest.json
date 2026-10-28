@@ -1,0 +1,10 @@
+{
+  "id": "folder-seal",
+  "name": "Folder Seal",
+  "version": "0.2.0",
+  "minAppVersion": "1.8.7",
+  "description": "Encrypt chosen folders before they go to git, decrypt them on your devices. Works on desktop and mobile, no external tools.",
+  "author": "Arlen Chereshnikov",
+  "isDesktopOnly": false,
+  "authorUrl": "https://github.com/DoZhD1k"
+}
